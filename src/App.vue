@@ -24,8 +24,8 @@
           <DemoBlock
             v-if="item"
             :id="item.id"
-            :x="colIndex * 200 + 50"
-            :y="rowIndex * 200 + 50"
+            :x="gridToCanvas(colIndex, rowIndex).x"
+            :y="gridToCanvas(colIndex, rowIndex).y"
             :size="100"
             :color="item.color"
             :content="item.content"
@@ -105,10 +105,10 @@ export default {
     this.width = width;
     this.height = height;
     const { col: maxCol, row: maxRow } = this.snapToGrid(width, height);
-    for (let row = 0; row < maxRow; row++) {
-      this.scene[row] = [];
-      for (let col = 0; col < maxCol; col++) {
-        this.scene[row][col] = null;
+    for (let col = 0; col < maxCol; col++) {
+      this.scene[col] = [];
+      for (let row = 0; row < maxRow; row++) {
+        this.scene[col][row] = null;
       }
     }
   },
@@ -121,9 +121,18 @@ export default {
       event.dataTransfer.setData("deltaX", deltaX);
       event.dataTransfer.setData("deltaY", deltaY);
     },
+    gridToCanvas(col, row) {
+      const x = col * GRID_STEP + GRID_STEP / 2;
+      const y = row * GRID_STEP + GRID_STEP / 2;
+      return { x, y };
+    },
     snapToGrid(x, y) {
-      const col = Math.floor(x / GRID_STEP);
-      const row = Math.floor(y / GRID_STEP);
+      const col = Math.round(
+        Math.min(x, this.width - GRID_STEP / 2) / GRID_STEP - 0.5
+      );
+      const row = Math.round(
+        Math.min(y, this.height - GRID_STEP / 2) / GRID_STEP - 0.5
+      );
       return { col, row };
     },
     onDrop(event) {
@@ -134,6 +143,15 @@ export default {
         event.offsetX + +shiftX,
         event.offsetY + +shiftY
       );
+      console.log(row, col);
+      if (
+        col < 0 ||
+        col > this.scene.length - 1 ||
+        row < 0 ||
+        row > this.scene[0].length - 1
+      ) {
+        return;
+      }
       if (+id) {
         const pickerItem = this.pickerItems.find((e) => e.id === +id);
         if (pickerItem) {
@@ -143,12 +161,6 @@ export default {
             x: col,
             y: row,
           };
-          // this.scene.push({
-          //   ...pickerItem,
-          //   id: nanoid(),
-          //   x: event.offsetX + +shiftX,
-          //   y: event.offsetY + +shiftY,
-          // });
         }
       } else {
         const sceneItem = this.scene.flat().find((e) => e && e.id === id);
@@ -158,20 +170,7 @@ export default {
           x: col,
           y: row,
         };
-
-        // this.scene = this.scene.map((e) => {
-        //   if (e.id === id) {
-        //     return {
-        //       ...e,
-        //       x: event.offsetX + +shiftX,
-        //       y: event.offsetY + +shiftY,
-        //     };
-        //   }
-        //   return e;
-        // });
       }
-
-      //this.pickedItems
     },
   },
 };
