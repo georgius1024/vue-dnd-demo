@@ -11,6 +11,14 @@
         :content="item.content"
         :key="item.id"
       />
+      <div class="separator"></div>
+      <div
+        class="trash-can"
+        @drop="onDelete"
+        @dragover.prevent
+        @dragenter.prevent
+        v-text="'🗑️'"
+      />
     </aside>
     <main
       class="canvas"
@@ -104,7 +112,8 @@ export default {
     const { width, height } = this.$refs.canvas.getBoundingClientRect();
     this.width = width;
     this.height = height;
-    const { col: maxCol, row: maxRow } = this.snapToGrid(width, height);
+    const maxCol = Math.floor(this.width / GRID_STEP);
+    const maxRow = Math.floor(this.height / GRID_STEP);
     for (let col = 0; col < maxCol; col++) {
       this.scene[col] = [];
       for (let row = 0; row < maxRow; row++) {
@@ -135,15 +144,27 @@ export default {
       );
       return { col, row };
     },
+    onDelete(event) {
+      const id = event.dataTransfer.getData("id");
+      if (+id) {
+        return;
+      }
+      const sceneItem = this.scene.flat().find((e) => e && e.id === id);
+      this.scene[sceneItem.y][sceneItem.x] = false;
+    },
     onDrop(event) {
       const id = event.dataTransfer.getData("id");
       const shiftX = +event.dataTransfer.getData("shiftX");
       const shiftY = +event.dataTransfer.getData("shiftY");
+      const dropOnCanvas = event.target === this.$refs.canvas;
+      const { top: targetShiftY, left: targetShiftX } = dropOnCanvas
+        ? { top: 0, left: 0 }
+        : event.target.getBoundingClientRect();
+      console.log({ targetShiftX, targetShiftY });
       const { row, col } = this.snapToGrid(
-        event.offsetX + +shiftX,
-        event.offsetY + +shiftY
+        event.offsetX + +shiftX + targetShiftX,
+        event.offsetY + +shiftY + targetShiftY
       );
-      console.log(row, col);
       if (
         col < 0 ||
         col > this.scene.length - 1 ||
@@ -197,6 +218,18 @@ export default {
   border-right: 6px solid #333;
   cursor: default;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  .trash-can {
+    height: 200;
+    font-size: 75px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+.separator {
+  flex-grow: 1;
 }
 
 .canvas {

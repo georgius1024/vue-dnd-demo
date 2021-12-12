@@ -5,6 +5,7 @@
     :style="style"
     draggable="true"
     @dragstart="startDrag"
+    @dragend="dragEnd"
     v-text="content"
   />
 </template>
@@ -59,6 +60,11 @@ export default {
   transition: all 200ms ease;
   &.dragging {
     transition: unset;
+    border: 4px dotted #cccccc77;
+    background: url("") top left no-repeat;
+    overflow: hidden;
+    opacity: 0.999;
+    border-radius: 50%;
   }
 }
 </style>
