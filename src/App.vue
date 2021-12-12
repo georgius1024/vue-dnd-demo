@@ -1,12 +1,13 @@
 <template>
-  <droppable class="canvas" @drop="onDrop">
+  <div class="canvas">
+    <droppable class="droppable" @drop="onDrop"> </droppable>
     <draggable :style="draggableStyle">
       <div class="marker" :style="markerStyle"></div>
     </draggable>
     <div class="panel">
       {{ position.x.toFixed(0) }} x {{ position.y.toFixed(0) }}
     </div>
-  </droppable>
+  </div>
 </template>
 <script>
 import draggable from "./draggable.vue";
@@ -14,7 +15,7 @@ import droppable from "./droppable.vue";
 export default {
   components: {
     draggable,
-    droppable
+    droppable,
   },
   data() {
     return {
@@ -74,8 +75,8 @@ export default {
       //   this.position.x = newPositionX;
       //   this.position.y = newPositionY;
       // }
-      this.position.x = event.offsetX + deltaX;
-      this.position.y = event.offsetY + deltaY;
+      this.position.x = event.offsetX + deltaX + 50;
+      this.position.y = event.offsetY + deltaY + 50;
     },
   },
 };
@@ -94,7 +95,13 @@ export default {
   margin-left: 25vw;
   margin-top: 25vh;
   position: relative;
+  padding: 50px;
   background-color: #ccc;
+  display: flex;
+  .droppable {
+    flex-grow: 1;
+    border: 1px solid black;
+  }
   .panel {
     position: absolute;
     width: 160px;
