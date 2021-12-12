@@ -1,6 +1,7 @@
 <template>
   <div
     class="block"
+    :class="{ dragging }"
     :style="style"
     draggable="true"
     @dragstart="startDrag"
@@ -10,6 +11,11 @@
 <script>
 export default {
   props: ["id", "x", "y", "size", "color", "content"],
+  data() {
+    return {
+      dragging: false,
+    };
+  },
   computed: {
     style() {
       return {
@@ -31,6 +37,10 @@ export default {
       event.dataTransfer.setData("id", this.id);
       event.dataTransfer.setData("shiftX", deltaX);
       event.dataTransfer.setData("shiftY", deltaY);
+      this.dragging = true;
+    },
+    dragEnd() {
+      this.dragging = false;
     },
   },
 };
@@ -46,5 +56,9 @@ export default {
   cursor: pointer;
   transform: translate(0, 0); // <== black magic from
   // // https://github.com/react-dnd/react-dnd/issues/788#issuecomment-367300464
+  transition: all 200ms ease;
+  &.dragging {
+    transition: unset;
+  }
 }
 </style>

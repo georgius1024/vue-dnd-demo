@@ -19,16 +19,20 @@
       @dragover.prevent
       @dragenter.prevent
     >
-      <DemoBlock
-        v-for="item in scene"
-        :id="item.id"
-        :x="item.x"
-        :y="item.y"
-        :size="100"
-        :color="item.color"
-        :content="item.content"
-        :key="item.id"
-      />
+      <template v-for="(row, rowIndex) in scene">
+        <template v-for="(item, colIndex) in row">
+          <DemoBlock
+            v-if="item"
+            :id="item.id"
+            :x="colIndex * 200 + 50"
+            :y="rowIndex * 200 + 50"
+            :size="100"
+            :color="item.color"
+            :content="item.content"
+            :key="item.id"
+          />
+        </template>
+      </template>
     </main>
   </div>
 </template>
@@ -37,7 +41,7 @@ import { nanoid } from "nanoid";
 import draggable from "./draggable.vue";
 import droppable from "./droppable.vue";
 import DemoBlock from "./components/DemoBlock.vue";
-
+const GRID_STEP = 200;
 export default {
   components: {
     draggable,
@@ -98,10 +102,15 @@ export default {
   },
   mounted() {
     const { width, height } = this.$refs.canvas.getBoundingClientRect();
-    this.position.x = width / 2;
-    this.position.y = height / 2;
     this.width = width;
     this.height = height;
+    const { col: maxCol, row: maxRow } = this.snapToGrid(width, height);
+    for (let row = 0; row < maxRow; row++) {
+      this.scene[row] = [];
+      for (let col = 0; col < maxCol; col++) {
+        this.scene[row][col] = null;
+      }
+    }
   },
   methods: {
     startDrag(event) {
@@ -112,31 +121,54 @@ export default {
       event.dataTransfer.setData("deltaX", deltaX);
       event.dataTransfer.setData("deltaY", deltaY);
     },
+    snapToGrid(x, y) {
+      const col = Math.floor(x / GRID_STEP);
+      const row = Math.floor(y / GRID_STEP);
+      return { col, row };
+    },
     onDrop(event) {
       const id = event.dataTransfer.getData("id");
       const shiftX = +event.dataTransfer.getData("shiftX");
       const shiftY = +event.dataTransfer.getData("shiftY");
+      const { row, col } = this.snapToGrid(
+        event.offsetX + +shiftX,
+        event.offsetY + +shiftY
+      );
       if (+id) {
         const pickerItem = this.pickerItems.find((e) => e.id === +id);
         if (pickerItem) {
-          this.scene.push({
+          this.scene[row][col] = {
             ...pickerItem,
             id: nanoid(),
-            x: event.offsetX + +shiftX,
-            y: event.offsetY + +shiftY,
-          });
+            x: col,
+            y: row,
+          };
+          // this.scene.push({
+          //   ...pickerItem,
+          //   id: nanoid(),
+          //   x: event.offsetX + +shiftX,
+          //   y: event.offsetY + +shiftY,
+          // });
         }
       } else {
-        this.scene = this.scene.map((e) => {
-          if (e.id === id) {
-            return {
-              ...e,
-              x: event.offsetX + +shiftX,
-              y: event.offsetY + +shiftY,
-            };
-          }
-          return e;
-        });
+        const sceneItem = this.scene.flat().find((e) => e && e.id === id);
+        this.scene[sceneItem.y][sceneItem.x] = false;
+        this.scene[row][col] = {
+          ...sceneItem,
+          x: col,
+          y: row,
+        };
+
+        // this.scene = this.scene.map((e) => {
+        //   if (e.id === id) {
+        //     return {
+        //       ...e,
+        //       x: event.offsetX + +shiftX,
+        //       y: event.offsetY + +shiftY,
+        //     };
+        //   }
+        //   return e;
+        // });
       }
 
       //this.pickedItems
