@@ -49,7 +49,7 @@ import { nanoid } from "nanoid";
 import draggable from "./draggable.vue";
 import droppable from "./droppable.vue";
 import DemoBlock from "./components/DemoBlock.vue";
-const GRID_STEP = 200;
+const GRID_STEP = 150;
 export default {
   components: {
     draggable,
@@ -114,10 +114,11 @@ export default {
     this.height = height;
     const maxCol = Math.floor(this.width / GRID_STEP);
     const maxRow = Math.floor(this.height / GRID_STEP);
-    for (let col = 0; col < maxCol; col++) {
-      this.scene[col] = [];
-      for (let row = 0; row < maxRow; row++) {
-        this.scene[col][row] = null;
+
+    for (let row = 0; row < maxRow; row++) {
+      this.scene[row] = [];
+      for (let col = 0; col < maxCol; col++) {
+        this.scene[row][col] = null;
       }
     }
   },
@@ -144,21 +145,12 @@ export default {
       );
       return { col, row };
     },
-    onDelete(event) {
-      const id = event.dataTransfer.getData("id");
-      if (+id) {
-        return;
-      }
-      const sceneItem = this.scene.flat().find((e) => e && e.id === id);
-      this.scene[sceneItem.y][sceneItem.x] = false;
+    validMoves(row, col) {
+      const moves = [];
+      //if (this.scene[row+1])
+      return moves;
     },
     onDrop(event) {
-      // console.log(event);
-      // console.log(this.$refs.canvas.getBoundingClientRect());
-      // console.log(event.target.getBoundingClientRect());
-      // if (event.target !== this.$refs.canvas) {
-      //   return;
-      // }
       const { left, top } = this.$refs.canvas.getBoundingClientRect();
       const id = event.dataTransfer.getData("id");
       const shiftX = +event.dataTransfer.getData("shiftX");
@@ -168,12 +160,11 @@ export default {
         y: event.pageY - top + shiftY,
       };
       const { row, col } = this.snapToGrid(coords.x, coords.y);
-
       if (
         col < 0 ||
-        col > this.scene.length - 1 ||
+        col > this.scene[0].length - 1 ||
         row < 0 ||
-        row > this.scene[0].length - 1
+        row > this.scene.length - 1
       ) {
         return;
       }
@@ -197,6 +188,14 @@ export default {
           y: row,
         };
       }
+    },
+    onDelete(event) {
+      const id = event.dataTransfer.getData("id");
+      if (+id) {
+        return;
+      }
+      const sceneItem = this.scene.flat().find((e) => e && e.id === id);
+      this.scene[sceneItem.y][sceneItem.x] = false;
     },
   },
 };
@@ -242,7 +241,6 @@ export default {
   position: relative;
   background-color: #ccc;
   display: flex;
-
   .marker {
     position: absolute;
     background-color: #333;
