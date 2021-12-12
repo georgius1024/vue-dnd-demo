@@ -153,18 +153,22 @@ export default {
       this.scene[sceneItem.y][sceneItem.x] = false;
     },
     onDrop(event) {
+      // console.log(event);
+      // console.log(this.$refs.canvas.getBoundingClientRect());
+      // console.log(event.target.getBoundingClientRect());
+      // if (event.target !== this.$refs.canvas) {
+      //   return;
+      // }
+      const { left, top } = this.$refs.canvas.getBoundingClientRect();
       const id = event.dataTransfer.getData("id");
       const shiftX = +event.dataTransfer.getData("shiftX");
       const shiftY = +event.dataTransfer.getData("shiftY");
-      const dropOnCanvas = event.target === this.$refs.canvas;
-      const { top: targetShiftY, left: targetShiftX } = dropOnCanvas
-        ? { top: 0, left: 0 }
-        : event.target.getBoundingClientRect();
-      console.log({ targetShiftX, targetShiftY });
-      const { row, col } = this.snapToGrid(
-        event.offsetX + +shiftX + targetShiftX,
-        event.offsetY + +shiftY + targetShiftY
-      );
+      const coords = {
+        x: event.pageX - left + shiftX,
+        y: event.pageY - top + shiftY,
+      };
+      const { row, col } = this.snapToGrid(coords.x, coords.y);
+
       if (
         col < 0 ||
         col > this.scene.length - 1 ||
@@ -173,6 +177,7 @@ export default {
       ) {
         return;
       }
+
       if (+id) {
         const pickerItem = this.pickerItems.find((e) => e.id === +id);
         if (pickerItem) {
