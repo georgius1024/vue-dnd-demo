@@ -1,16 +1,21 @@
 <template>
-  <div class="canvas" @drop="onDrop" @dragover.prevent @dragenter.prevent>
-    <div
-      class="marker"
-      :style="markerStyle"
-      draggable="true"
-      @dragstart="startDrag"
-    ></div>
-    <div class="panel">{{ position.x }} x {{ position.y }}</div>
-  </div>
+  <droppable class="canvas" @drop="onDrop">
+    <draggable :style="draggableStyle">
+      <div class="marker" :style="markerStyle"></div>
+    </draggable>
+    <div class="panel">
+      {{ position.x.toFixed(0) }} x {{ position.y.toFixed(0) }}
+    </div>
+  </droppable>
 </template>
 <script>
+import draggable from "./draggable.vue";
+import droppable from "./droppable.vue";
 export default {
+  components: {
+    draggable,
+    droppable
+  },
   data() {
     return {
       width: 0,
@@ -23,12 +28,18 @@ export default {
     };
   },
   computed: {
+    draggableStyle() {
+      return {
+        cursor: "move",
+        position: "absolute",
+        left: `${this.position.x - this.markerSize / 2}px`,
+        top: `${this.position.y - this.markerSize / 2}px`,
+      };
+    },
     markerStyle() {
       return {
         width: `${this.markerSize}px`,
         height: `${this.markerSize}px`,
-        left: `${this.position.x - this.markerSize / 2}px`,
-        top: `${this.position.y - this.markerSize / 2}px`,
       };
     },
   },
@@ -49,21 +60,22 @@ export default {
       event.dataTransfer.setData("deltaY", deltaY);
     },
     onDrop(event) {
-      const deltaX = +event.dataTransfer.getData("deltaX");
-      const deltaY = +event.dataTransfer.getData("deltaY");
-      const newPositionX = event.clientX + deltaX;
-      const newPositionY = event.clientY + deltaY;
-      if (
-        newPositionX > this.markerSize / 2 &&
-        newPositionX < this.width - this.markerSize / 2 &&
-        newPositionY > this.markerSize / 2 &&
-        newPositionY < this.height - this.markerSize / 2
-      ) {
-        this.position.x = newPositionX;
-        this.position.y = newPositionY;
-      }
-      // this.position.x = event.clientX + deltaX;
-      // this.position.y = event.clientY + deltaY;
+      const deltaX = this.markerSize / 2 - event.dataTransfer.getData("deltaX");
+      const deltaY = this.markerSize / 2 - event.dataTransfer.getData("deltaY");
+      console.log({ deltaX, deltaY });
+      // const newPositionX = event.offsetX + deltaX;
+      // const newPositionY = event.offsetY + deltaY;
+      // if (
+      //   newPositionX > this.markerSize / 2 &&
+      //   newPositionX < this.width - this.markerSize / 2 &&
+      //   newPositionY > this.markerSize / 2 &&
+      //   newPositionY < this.height - this.markerSize / 2
+      // ) {
+      //   this.position.x = newPositionX;
+      //   this.position.y = newPositionY;
+      // }
+      this.position.x = event.offsetX + deltaX;
+      this.position.y = event.offsetY + deltaY;
     },
   },
 };
@@ -99,10 +111,10 @@ export default {
     position: absolute;
     background-color: #333;
     border-radius: 100%;
-    cursor: move;
+    outline: none;
     transform: translate(0, 0); // <== black magic from
     // https://github.com/react-dnd/react-dnd/issues/788#issuecomment-367300464
-    // transition: all 200ms ease;
+    //transition: all 200ms ease;
   }
 }
 </style>
