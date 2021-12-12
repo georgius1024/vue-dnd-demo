@@ -1,24 +1,52 @@
 <template>
-  <div class="canvas">
-    <droppable class="droppable" @drop="onDrop"> </droppable>
-    <draggable :style="draggableStyle">
-      <div class="marker" :style="markerStyle"></div>
-    </draggable>
-    <div class="panel">
-      {{ position.x.toFixed(0) }} x {{ position.y.toFixed(0) }}
-    </div>
+  <div class="layout">
+    <aside class="picker">
+      <DemoBlock
+        v-for="(item, index) in pickerItems"
+        :id="item.id"
+        :x="100 - 3"
+        :y="50 + index * 120"
+        :size="100"
+        :color="item.color"
+        :content="item.content"
+        :key="item.id"
+      />
+    </aside>
+    <main
+      class="canvas"
+      ref="canvas"
+      @drop="onDrop"
+      @dragover.prevent
+      @dragenter.prevent
+    >
+      <DemoBlock
+        v-for="item in scene"
+        :id="item.id"
+        :x="item.x"
+        :y="item.y"
+        :size="100"
+        :color="item.color"
+        :content="item.content"
+        :key="item.id"
+      />
+    </main>
   </div>
 </template>
 <script>
+import { nanoid } from "nanoid";
 import draggable from "./draggable.vue";
 import droppable from "./droppable.vue";
+import DemoBlock from "./components/DemoBlock.vue";
+
 export default {
   components: {
     draggable,
     droppable,
+    DemoBlock,
   },
   data() {
     return {
+      scene: [],
       width: 0,
       height: 0,
       markerSize: 50,
@@ -29,6 +57,30 @@ export default {
     };
   },
   computed: {
+    pickerItems() {
+      return [
+        {
+          id: 101,
+          color: "red",
+          content: "🐵",
+        },
+        {
+          id: 102,
+          color: "navy",
+          content: "🦑",
+        },
+        {
+          id: 103,
+          color: "yellow",
+          content: "🐶",
+        },
+        {
+          id: 104,
+          color: "darkblue",
+          content: "🐱",
+        },
+      ];
+    },
     draggableStyle() {
       return {
         cursor: "move",
@@ -45,7 +97,7 @@ export default {
     },
   },
   mounted() {
-    const { width, height } = this.$el.getBoundingClientRect();
+    const { width, height } = this.$refs.canvas.getBoundingClientRect();
     this.position.x = width / 2;
     this.position.y = height / 2;
     this.width = width;
@@ -61,22 +113,33 @@ export default {
       event.dataTransfer.setData("deltaY", deltaY);
     },
     onDrop(event) {
-      const deltaX = this.markerSize / 2 - event.dataTransfer.getData("deltaX");
-      const deltaY = this.markerSize / 2 - event.dataTransfer.getData("deltaY");
-      console.log({ deltaX, deltaY });
-      // const newPositionX = event.offsetX + deltaX;
-      // const newPositionY = event.offsetY + deltaY;
-      // if (
-      //   newPositionX > this.markerSize / 2 &&
-      //   newPositionX < this.width - this.markerSize / 2 &&
-      //   newPositionY > this.markerSize / 2 &&
-      //   newPositionY < this.height - this.markerSize / 2
-      // ) {
-      //   this.position.x = newPositionX;
-      //   this.position.y = newPositionY;
-      // }
-      this.position.x = event.offsetX + deltaX + 50;
-      this.position.y = event.offsetY + deltaY + 50;
+      const id = event.dataTransfer.getData("id");
+      const shiftX = +event.dataTransfer.getData("shiftX");
+      const shiftY = +event.dataTransfer.getData("shiftY");
+      if (+id) {
+        const pickerItem = this.pickerItems.find((e) => e.id === +id);
+        if (pickerItem) {
+          this.scene.push({
+            ...pickerItem,
+            id: nanoid(),
+            x: event.offsetX + +shiftX,
+            y: event.offsetY + +shiftY,
+          });
+        }
+      } else {
+        this.scene = this.scene.map((e) => {
+          if (e.id === id) {
+            return {
+              ...e,
+              x: event.offsetX + +shiftX,
+              y: event.offsetY + +shiftY,
+            };
+          }
+          return e;
+        });
+      }
+
+      //this.pickedItems
     },
   },
 };
@@ -89,31 +152,28 @@ export default {
   box-sizing: border-box;
 }
 
-.canvas {
-  width: 50vw;
-  height: 50vh;
-  margin-left: 25vw;
-  margin-top: 25vh;
+.layout {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  grid-template-rows: 1fr;
+  grid-template-areas: "sidebar main";
+  width: 100vw;
+  height: 100vh;
+}
+.picker {
+  grid-area: sidebar;
+  background-color: aqua;
+  border-right: 6px solid #333;
+  cursor: default;
   position: relative;
-  padding: 50px;
+}
+
+.canvas {
+  grid-area: main;
+  position: relative;
   background-color: #ccc;
   display: flex;
-  .droppable {
-    flex-grow: 1;
-    border: 1px solid black;
-  }
-  .panel {
-    position: absolute;
-    width: 160px;
-    height: 32px;
-    border: 1px solid #333;
-    background-color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    top: -32px;
-    left: calc(25vw - 80px);
-  }
+
   .marker {
     position: absolute;
     background-color: #333;

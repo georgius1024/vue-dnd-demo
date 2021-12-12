@@ -17,3 +17,9 @@ export default {
   },
 };
 </script>
+<style lang="scss" scoped>
+div {
+  transform: translate(0, 0); // <== black magic from
+  background-color: transparent;
+}
+</style>
