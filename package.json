@@ -10,12 +10,12 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
-    "gh-pages": "^3.2.3",
     "nanoid": "^3.1.30",
     "sass": "^1.45.0",
     "vue": "^3.2.23"
   },
   "devDependencies": {
+    "gh-pages": "^3.2.3",
     "@vitejs/plugin-vue": "^1.10.2",
     "vite": "^2.7.0"
   }
