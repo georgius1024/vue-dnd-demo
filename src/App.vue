@@ -41,7 +41,6 @@
     <main
       class="canvas"
       ref="canvas"
-      @mousedown="spotCoords"
       @drop="onDrop"
       @dragover.prevent
       @dragenter.prevent
@@ -72,7 +71,7 @@
       </span>
       <template v-if="history">
         <DemoBlock
-          v-for="item in flatScene"
+          v-for="item in scene"
           :id="item.id"
           :x="gridToCanvas(item.x, item.y).x"
           :y="gridToCanvas(item.x, item.y).y"
@@ -87,8 +86,6 @@
 </template>
 <script>
 import { nanoid } from "nanoid";
-import draggable from "./draggable.vue";
-import droppable from "./droppable.vue";
 import DemoBlock from "./components/DemoBlock.vue";
 import {
   initialize,
@@ -104,28 +101,18 @@ const GRID_STEP = 100;
 const OFFSET = 100;
 export default {
   components: {
-    draggable,
-    droppable,
     DemoBlock,
   },
   data() {
     return {
       history: null,
-      width: 0,
-      height: 0,
-      markerSize: 50,
-      position: {
-        x: 0,
-        y: 0,
-      },
+      maxCol: 0,
+      maxRow: 0,
     };
   },
   computed: {
     scene() {
       return this.history ? getCurrent(this.history) : [];
-    },
-    flatScene() {
-      return this.scene.flat().filter(Boolean);
     },
     undoable() {
       return Boolean(this.history && undoable(this.history));
@@ -135,6 +122,14 @@ export default {
     },
     hasUnsavedChanges() {
       return this.undoable;
+    },
+    grid() {
+      return this.scene.reduce((map, item) => {
+        if (!map[item.x]) {
+          map[item.x] = [];
+        }
+        map[item.x][item.y] = item;
+      }, {});
     },
     pickerItems() {
       return [
@@ -160,36 +155,12 @@ export default {
         },
       ];
     },
-    draggableStyle() {
-      return {
-        cursor: "move",
-        position: "absolute",
-        left: `${this.position.x - this.markerSize / 2}px`,
-        top: `${this.position.y - this.markerSize / 2}px`,
-      };
-    },
-    markerStyle() {
-      return {
-        width: `${this.markerSize}px`,
-        height: `${this.markerSize}px`,
-      };
-    },
   },
   mounted() {
-    //const { width, height } = this.$refs.canvas.getBoundingClientRect();
     const { scrollWidth, scrollHeight } = this.$refs.canvas;
-
-    this.width = scrollWidth;
-    this.height = scrollHeight;
-    const maxCol = Math.ceil((this.width - 2 * OFFSET) / GRID_STEP);
-    const maxRow = Math.ceil((this.height - 2 * OFFSET) / GRID_STEP);
+    this.maxCol = Math.ceil((scrollWidth - 2 * OFFSET) / GRID_STEP);
+    this.maxRow = Math.ceil((scrollHeight - 2 * OFFSET) / GRID_STEP);
     const scene = [];
-    for (let row = 0; row < maxRow; row++) {
-      scene[row] = [];
-      for (let col = 0; col < maxCol; col++) {
-        scene[row][col] = null;
-      }
-    }
     this.history = initialize(scene);
 
     this.keyHandler = (e) => {
@@ -225,26 +196,6 @@ export default {
     redo() {
       this.history = redo(this.history);
     },
-    spotCoords(event) {
-      // const { offsetLeft, offsetTop, scrollLeft, scrollTop } =
-      //   this.$refs.canvas;
-      // console.log("page", event.pageX, event.pageY);
-      // console.log(
-      //   "fixed",
-      //   event.pageX - offsetLeft + scrollLeft,
-      //   event.pageY - offsetTop + scrollTop
-      // );
-      // console.log("offset", { offsetLeft, offsetTop, scrollLeft, scrollTop });
-      // console.log("offset", event.offsetX, event.offsetY);
-    },
-    startDrag(event) {
-      event.dataTransfer.dropEffect = "move";
-      event.dataTransfer.effectAllowed = "move";
-      const deltaX = this.position.x - event.clientX;
-      const deltaY = this.position.y - event.clientY;
-      event.dataTransfer.setData("deltaX", deltaX);
-      event.dataTransfer.setData("deltaY", deltaY);
-    },
     gridToCanvas(col, row) {
       const x = col * GRID_STEP + OFFSET;
       const y = row * GRID_STEP + OFFSET;
@@ -255,19 +206,46 @@ export default {
       const row = Math.round((y - OFFSET) / GRID_STEP); // Math.round(Math.min(y, this.height - 2 * OFFSET) / GRID_STEP);
       return { col, row };
     },
-    placeAt(row, col, item) {
-      const scene = this.scene.map((e) => [...e]);
-      if (scene[row][col] && scene[row][col].id !== item.id) {
-        if (!scene[row][col + 1] && col < scene[row].length - 1) {
-          scene[row][col + 1] = scene[row][col];
-        } else if (!this.scene[row + 1][col] && row < this.scene.length - 1) {
-          scene[row + 1][col] = scene[row][col];
+    placeAt(x, y, item) {
+      const grid = this.scene.reduce((grid, item) => {
+        if (!grid[item.x]) {
+          grid[item.x] = {};
+        }
+        grid[item.x][item.y] = item;
+        return grid;
+      }, {});
+      const at = (x, y) => {
+        return grid[x] && grid[x][y];
+      };
+      const put = (x, y, item) => {
+        if (!grid[x]) {
+          grid[x] = {};
+        }
+        grid[x][y] = { ...item, x, y };
+      };
+      const currentAt = at(x, y);
+      if (currentAt && currentAt.id !== item.id) {
+        if (!at(x + 1, y) && x < this.maxCol - 1) {
+          put(x + 1, y, currentAt);
+        } else if (!at(x - 1, y) && x > 0) {
+          put(x - 1, y, currentAt);
+        } else if (!at(x, y + 1) && y < this.maxRow - 1) {
+          put(x, y + 1, currentAt);
+        } else if (!at(x, y - 1) && y > 0) {
+          put(x, y - 1, currentAt);
         } else {
           return false;
         }
       }
-      scene[item.y][item.x] = false;
-      scene[row][col] = { ...item, x: col, y: row };
+      if (at(item.x, item.y)) {
+        grid[item.x][item.y] = null;
+      }
+      put(x, y, item);
+      const scene = Object.values(grid)
+        .filter(Boolean)
+        .reduce((list, items) => {
+          return [...list, ...Object.values(items)].filter(Boolean);
+        }, []);
       this.updateScene(scene);
       return true;
     },
@@ -275,8 +253,6 @@ export default {
       const { offsetLeft, offsetTop, scrollLeft, scrollTop } =
         this.$refs.canvas;
       const id = event.dataTransfer.getData("id");
-      // const shiftX = +event.dataTransfer.getData("shiftX");
-      // const shiftY = +event.dataTransfer.getData("shiftY");
       const coords = {
         x: event.pageX - offsetLeft + scrollLeft,
         y: event.pageY - offsetTop + scrollTop,
@@ -284,17 +260,17 @@ export default {
       const { row, col } = this.snapToGrid(coords.x, coords.y);
       if (
         col < 0 ||
-        col > this.scene[0].length - 1 ||
+        col > this.maxCol - 1 ||
         row < 0 ||
-        row > this.scene.length - 1
+        row > this.maxRow - 1
       ) {
         return;
       }
-      console.log(col, row);
+
       if (+id) {
         const pickerItem = this.pickerItems.find((e) => e.id === +id);
         if (pickerItem) {
-          this.placeAt(row, col, {
+          this.placeAt(col, row, {
             ...pickerItem,
             id: nanoid(),
             x: col,
@@ -302,8 +278,8 @@ export default {
           });
         }
       } else {
-        const sceneItem = this.scene.flat().find((e) => e && e.id === id);
-        this.placeAt(row, col, sceneItem);
+        const sceneItem = this.scene.find((e) => e.id === id);
+        this.placeAt(col, row, sceneItem);
       }
     },
     onDelete(event) {
@@ -311,8 +287,8 @@ export default {
       if (+id) {
         return;
       }
-      const sceneItem = this.scene.flat().find((e) => e && e.id === id);
-      this.scene[sceneItem.y][sceneItem.x] = false;
+      const scene = this.scene.filter((e) => e.id !== id);
+      this.updateScene(scene);
     },
   },
 };
