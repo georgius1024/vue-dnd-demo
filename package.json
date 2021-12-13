@@ -1,7 +1,7 @@
 {
   "name": "vue-dnd-demo",
   "version": "1.0.0",
-  "homepage": "https://georgius1024.github.io/vue-dnd-demo/",
+  "homepage": "https://georgius1024.github.io/vue-dnd-demo",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
