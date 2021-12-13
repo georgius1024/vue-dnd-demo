@@ -1,12 +1,16 @@
 {
-  "name": "vue-dnd",
-  "version": "0.0.0",
+  "name": "vue-dnd-demo",
+  "version": "1.0.0",
+  "homepage": "https://georgius1024.github.io/vue-dnd-demo/",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
+    "gh-pages": "^3.2.3",
     "nanoid": "^3.1.30",
     "sass": "^1.45.0",
     "vue": "^3.2.23"
