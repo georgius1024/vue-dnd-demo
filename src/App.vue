@@ -75,6 +75,16 @@ import { nanoid } from "nanoid";
 import draggable from "./draggable.vue";
 import droppable from "./droppable.vue";
 import DemoBlock from "./components/DemoBlock.vue";
+import {
+  initialize,
+  addState,
+  getCurrent,
+  undoable,
+  redoable,
+  undo,
+  redo,
+} from "./utils/history";
+
 const GRID_STEP = 100;
 const OFFSET = 100;
 export default {
@@ -85,7 +95,7 @@ export default {
   },
   data() {
     return {
-      scene: [],
+      history: null,
       width: 0,
       height: 0,
       markerSize: 50,
@@ -96,6 +106,18 @@ export default {
     };
   },
   computed: {
+    scene() {
+      return this.history ? getCurrent(this.history) : [];
+    },
+    undoable() {
+      return Boolean(this.history && undoable(this.history));
+    },
+    redoable() {
+      return Boolean(this.history && redoable(this.history));
+    },
+    hasUnsavedChanges() {
+      return this.undoable;
+    },
     pickerItems() {
       return [
         {
@@ -143,27 +165,59 @@ export default {
     this.height = scrollHeight;
     const maxCol = Math.ceil((this.width - 2 * OFFSET) / GRID_STEP);
     const maxRow = Math.ceil((this.height - 2 * OFFSET) / GRID_STEP);
-
+    const scene = [];
     for (let row = 0; row < maxRow; row++) {
-      this.scene[row] = [];
+      scene[row] = [];
       for (let col = 0; col < maxCol; col++) {
-        this.scene[row][col] = null;
+        scene[row][col] = null;
       }
     }
+    this.history = initialize(scene);
+
+    this.keyHandler = (e) => {
+      const editing = e.target.getAttribute("contenteditable") === "true";
+      if (editing) {
+        return;
+      }
+      const undoPressed =
+        (e.code === "KeyZ" && e.ctrlKey) ||
+        (e.code === "Backspace" && e.ctrlKey);
+      const redoPressed = e.code === "KeyY" && e.ctrlKey;
+      if (undoPressed && this.undoable) {
+        this.undo();
+        e.stopPropagation();
+      }
+      if (redoPressed && this.redoable) {
+        this.redo();
+        e.stopPropagation();
+      }
+    };
+    document.addEventListener("keydown", this.keyHandler);
+  },
+  beforeDestroy() {
+    document.removeEventListener("keydown", this.keyHandler);
   },
   methods: {
+    updateScene(scene) {
+      this.history = addState(this.history, scene);
+    },
+    undo() {
+      this.history = undo(this.history);
+    },
+    redo() {
+      this.history = redo(this.history);
+    },
     spotCoords(event) {
-      const { offsetLeft, offsetTop, scrollLeft, scrollTop } =
-        this.$refs.canvas;
-
-      console.log("page", event.pageX, event.pageY);
-      console.log(
-        "fixed",
-        event.pageX - offsetLeft + scrollLeft,
-        event.pageY - offsetTop + scrollTop
-      );
-      console.log("offset", { offsetLeft, offsetTop, scrollLeft, scrollTop });
-      console.log("offset", event.offsetX, event.offsetY);
+      // const { offsetLeft, offsetTop, scrollLeft, scrollTop } =
+      //   this.$refs.canvas;
+      // console.log("page", event.pageX, event.pageY);
+      // console.log(
+      //   "fixed",
+      //   event.pageX - offsetLeft + scrollLeft,
+      //   event.pageY - offsetTop + scrollTop
+      // );
+      // console.log("offset", { offsetLeft, offsetTop, scrollLeft, scrollTop });
+      // console.log("offset", event.offsetX, event.offsetY);
     },
     startDrag(event) {
       event.dataTransfer.dropEffect = "move";
@@ -183,21 +237,20 @@ export default {
       const row = Math.round((y - OFFSET) / GRID_STEP); // Math.round(Math.min(y, this.height - 2 * OFFSET) / GRID_STEP);
       return { col, row };
     },
-    validMoves(row, col) {
-      const moves = [];
-      //if (this.scene[row+1])
-      return moves;
-    },
-    insertAt(col, row) {
+    placeAt(row, col, item) {
       const scene = this.scene.map((e) => [...e]);
-      if (!scene[row][col + 1] && col < scene[row].length - 1) {
-        scene[row][col + 1] = scene[row][col];
-      } else if (!this.scene[row + 1][col] && row < this.scene.length - 1) {
-        scene[row + 1][col] = scene[row][col];
-      } else {
-        return false;
+      if (scene[row][col] && scene[row][col].id !== item.id) {
+        if (!scene[row][col + 1] && col < scene[row].length - 1) {
+          scene[row][col + 1] = scene[row][col];
+        } else if (!this.scene[row + 1][col] && row < this.scene.length - 1) {
+          scene[row + 1][col] = scene[row][col];
+        } else {
+          return false;
+        }
       }
-      this.scene = scene;
+      scene[item.y][item.x] = false;
+      scene[row][col] = { ...item, x: col, y: row };
+      this.updateScene(scene);
       return true;
     },
     onDrop(event) {
@@ -219,29 +272,20 @@ export default {
       ) {
         return;
       }
-      if (this.scene[row][col]) {
-        if (!this.insertAt(row, col)) {
-          return;
-        }
-      }
+      console.log(col, row);
       if (+id) {
         const pickerItem = this.pickerItems.find((e) => e.id === +id);
         if (pickerItem) {
-          this.scene[row][col] = {
+          this.placeAt(row, col, {
             ...pickerItem,
             id: nanoid(),
             x: col,
             y: row,
-          };
+          });
         }
       } else {
         const sceneItem = this.scene.flat().find((e) => e && e.id === id);
-        this.scene[sceneItem.y][sceneItem.x] = false;
-        this.scene[row][col] = {
-          ...sceneItem,
-          x: col,
-          y: row,
-        };
+        this.placeAt(row, col, sceneItem);
       }
     },
     onDelete(event) {
