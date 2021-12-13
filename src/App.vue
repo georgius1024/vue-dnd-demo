@@ -6,7 +6,7 @@
         :id="item.id"
         :x="100 - 3"
         :y="50 + index * 120"
-        :size="100"
+        :size="80"
         :color="item.color"
         :content="item.content"
         :key="item.id"
@@ -20,6 +20,24 @@
         v-text="'🗑️'"
       />
     </aside>
+    <header class="header">
+      <button @click="undo" :disabled="!undoable">
+        <svg style="width: 24px; height: 24px" viewBox="0 0 24 24">
+          <path
+            fill="currentColor"
+            d="M12.5,8C9.85,8 7.45,9 5.6,10.6L2,7V16H11L7.38,12.38C8.77,11.22 10.54,10.5 12.5,10.5C16.04,10.5 19.05,12.81 20.1,16L22.47,15.22C21.08,11.03 17.15,8 12.5,8Z"
+          />
+        </svg>
+      </button>
+      <button @click="redo" :disabled="!redoable">
+        <svg style="width: 24px; height: 24px" viewBox="0 0 24 24">
+          <path
+            fill="currentColor"
+            d="M18.4,10.6C16.55,9 14.15,8 11.5,8C6.85,8 2.92,11.03 1.54,15.22L3.9,16C4.95,12.81 7.95,10.5 11.5,10.5C13.45,10.5 15.23,11.22 16.62,12.38L13,16H22V7L18.4,10.6Z"
+          />
+        </svg>
+      </button>
+    </header>
     <main
       class="canvas"
       ref="canvas"
@@ -38,7 +56,6 @@
         }"
       >
         {{ step }}
-        <span style="font-size: 75%">{{ (step - 1) * 100 + 100 }}</span>
       </span>
       <span
         v-for="step in 10"
@@ -46,26 +63,24 @@
         :style="{
           position: 'absolute',
           top: `${(step - 1) * 100 + 100}px`,
-          borderTop: '1px solid black',
+          transform: 'rotate(-90deg)',
+          borderRight: '1px solid black',
+          paddingTop: '6px',
         }"
       >
         {{ step }}
-        <span style="font-size: 75%">{{ (step - 1) * 100 + 100 }}</span>
       </span>
-
-      <template v-for="(row, rowIndex) in scene">
-        <template v-for="(item, colIndex) in row">
-          <DemoBlock
-            v-if="item"
-            :id="item.id"
-            :x="gridToCanvas(colIndex, rowIndex).x"
-            :y="gridToCanvas(colIndex, rowIndex).y"
-            :size="100"
-            :color="item.color"
-            :content="item.content"
-            :key="item.id"
-          />
-        </template>
+      <template v-if="history">
+        <DemoBlock
+          v-for="item in flatScene"
+          :id="item.id"
+          :x="gridToCanvas(item.x, item.y).x"
+          :y="gridToCanvas(item.x, item.y).y"
+          :size="80"
+          :color="item.color"
+          :content="item.content"
+          :key="item.id"
+        />
       </template>
     </main>
   </div>
@@ -108,6 +123,9 @@ export default {
   computed: {
     scene() {
       return this.history ? getCurrent(this.history) : [];
+    },
+    flatScene() {
+      return this.scene.flat().filter(Boolean);
     },
     undoable() {
       return Boolean(this.history && undoable(this.history));
@@ -306,14 +324,40 @@ export default {
   font-size: 16px;
   box-sizing: border-box;
 }
+.separator {
+  flex-grow: 1;
+}
 
 .layout {
   display: grid;
   grid-template-columns: 200px 1fr;
-  grid-template-rows: 1fr;
-  grid-template-areas: "sidebar main";
+  grid-template-rows: 64px 1fr;
+  grid-template-areas: "header header" "sidebar main";
   width: 100vw;
   height: 100vh;
+}
+.header {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  background-color: #ccc7;
+  button {
+    border-radius: 100%;
+    background-color: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    width: 32px;
+    height: 32px;
+    margin: 32px;
+    color: #333;
+    cursor: pointer;
+    &:disabled {
+      background-color: #ccc7;
+      color: #3337;
+    }
+  }
 }
 .picker {
   grid-area: sidebar;
@@ -330,9 +374,6 @@ export default {
     align-items: center;
     justify-content: center;
   }
-}
-.separator {
-  flex-grow: 1;
 }
 
 .canvas {

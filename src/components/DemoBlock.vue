@@ -59,7 +59,7 @@ export default {
   // // https://github.com/react-dnd/react-dnd/issues/788#issuecomment-367300464
   transition: all 200ms ease;
   &.dragging {
-    transition: unset;
+    //transition: unset;
     border: 4px dotted #cccccc77;
     background: url("") top left no-repeat;
     overflow: hidden;
