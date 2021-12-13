@@ -21,6 +21,7 @@
       />
     </aside>
     <header class="header">
+      <h1>Vue dragging demo</h1>
       <button @click="undo" :disabled="!undoable">
         <svg style="width: 24px; height: 24px" viewBox="0 0 24 24">
           <path
@@ -332,6 +333,12 @@ export default {
   display: flex;
   align-items: center;
   background-color: #ccc7;
+  h1 {
+    flex-grow: 1;
+    font-size: 21px;
+    font-weight: 400;
+    text-align: center;
+  }
   button {
     border-radius: 100%;
     background-color: transparent;
@@ -373,14 +380,5 @@ export default {
   background-color: #ccc;
   display: flex;
   overflow-y: hidden;
-  .marker {
-    position: absolute;
-    background-color: #333;
-    border-radius: 100%;
-    outline: none;
-    transform: translate(0, 0); // <== black magic from
-    // https://github.com/react-dnd/react-dnd/issues/788#issuecomment-367300464
-    //transition: all 200ms ease;
-  }
 }
 </style>
