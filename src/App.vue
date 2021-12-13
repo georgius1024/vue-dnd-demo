@@ -160,8 +160,17 @@ export default {
     const { scrollWidth, scrollHeight } = this.$refs.canvas;
     this.maxCol = Math.ceil((scrollWidth - 2 * OFFSET) / GRID_STEP);
     this.maxRow = Math.ceil((scrollHeight - 2 * OFFSET) / GRID_STEP);
-    const scene = [];
-    this.history = initialize(scene);
+
+    this.history = initialize([]);
+
+    try {
+      const scene = JSON.parse(localStorage["scene"]);
+      if (Array.isArray(scene)) {
+        this.history = initialize(scene);
+      }
+    } catch {
+      this.history = initialize([]);
+    }
 
     this.keyHandler = (e) => {
       const editing = e.target.getAttribute("contenteditable") === "true";
@@ -187,14 +196,20 @@ export default {
     document.removeEventListener("keydown", this.keyHandler);
   },
   methods: {
+    save() {
+      localStorage["scene"] = JSON.stringify(this.scene);
+    },
     updateScene(scene) {
       this.history = addState(this.history, scene);
+      this.save();
     },
     undo() {
       this.history = undo(this.history);
+      this.save();
     },
     redo() {
       this.history = redo(this.history);
+      this.save();
     },
     gridToCanvas(col, row) {
       const x = col * GRID_STEP + OFFSET;
